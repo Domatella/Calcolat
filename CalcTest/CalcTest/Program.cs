@@ -11,18 +11,21 @@ namespace CalcTest
         static void Main(string[] args)
         {
             Console.WriteLine("Enter expression:");
-            string exp = Console.ReadLine();
+            string expr = Console.ReadLine();
+
+            Calc.Lexer lexer = new Calc.Lexer(expr);
 
             try
             {
-                Calc.Token[] tokens = Calc.Lexer.Process(exp);
+                Calc.Token[] tokens = lexer.Process();
 
                 foreach (var t in tokens)
                 {
                     Console.WriteLine(t);
                 }
             }
-            catch (Calc.Lexer.ErrorInputException e)
+
+            catch (Calc.Lexer.InputErrorException e)
             {
                 Console.WriteLine(e.Message);
             }

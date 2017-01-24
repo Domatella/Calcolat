@@ -8,80 +8,83 @@ using System.Globalization;
 
 namespace Calc
 {
-    public static class Lexer
+    public class Lexer
     {
-        public class ErrorInputException : Exception
+        public class InputErrorException : Exception
         {
-            public ErrorInputException(string message, int place)
+            public InputErrorException(string message, int place)
                 : base($"Error in character #{place + 1}: {message}") { }
+        }
+
+        private string input;
+        private int i;
+        private List<Token> tokens;
+
+        public string InputString { get { return input; } }
+        public Token[] Tokens { get { return tokens.ToArray(); } }
+
+        public Lexer(string input)
+        {
+            this.input = input;
+            tokens = new List<Token>();
         }
 
         /// <summary>
         /// Lexical processing expression
         /// </summary>
-        /// <param name="input">expression</param>
         /// <returns>array of simple tokens</returns>
-        public static Token[] Process(string input)
+        public Token[] Process()
         {
             // Replacing dots with commas 
             // for supporting both as decimal separators
             string buf = input.Replace('.', ',');
             input = buf;
-            List<Token> Tokens = new List<Token>();
 
-            // Flag that shows if current character 
-            // is not below to previous number if it is a digit
-            bool digit = true;
-
-            for (int i = 0; i < input.Length; i++)
+            for (i = 0; i < input.Length; i++)
             {
-                if (((input[i] > '0' && input[i] <= '9') || input[i] == ',') && digit)
+                if (((input[i] > '0' && input[i] <= '9') || input[i] == ','))
                 {
-                    decNumber(ref i, input, ref digit, Tokens);
+                    procDecNumber();
                 }
 
-                else if (input[i] == '0' && digit)
+                else if (input[i] == '0')
                 {
                     if (i < input.Length - 1 && (input[i + 1] == 'x' || input[i + 1] == 'X'))
                     {
-                        hexNumber(ref i, input, ref digit, Tokens);
+                        prcoHexNumber();
                     }
 
                     else if (i < input.Length - 1 && (input[i + 1] >= '0' && input[i + 1] <= '7'))
                     {
-                        octNumber(ref i, input, ref digit, Tokens);
+                        procOctNumber();
                     }
 
                     // For processing just zeros
                     else 
                     {
-                        decNumber(ref i, input, ref digit, Tokens);
+                        procDecNumber();
                     }
                 }
 
                 else
                 {
-                    op(i, input, Tokens);
-                    digit = true;
+                    procOp();
                 }
             }
 
-            return Tokens.ToArray();
+            return tokens.ToArray();
         }
 
         /// <summary>
         /// Processing numbers as decimal
         /// </summary>
-        /// <param name="i">indexer</param>
-        /// <param name="input">expression</param>
-        /// <param name="digit">digit flag</param>
-        /// <param name="Tokens">using Tokens' list</param>
-        private static void decNumber(ref int i, string input, ref bool digit, List<Token> Tokens)
+        private void procDecNumber()
         {
             StringBuilder number = new StringBuilder();
 
             // Flag for catching two commas in one number
             bool fraction = false;
+            bool isLastChar = false;
             while ((input[i] >= '0' && input[i] <= '9') ||
                     input[i] == ',')
             {
@@ -101,42 +104,39 @@ namespace Calc
 
                     else
                     {
+                        isLastChar = true;
                         break;
                     }
                 }
 
                 else
                 {
-                    throw new ErrorInputException("digit cannot have two commas", i);
+                    throw new InputErrorException("digit cannot have two commas", i);
                 }
             }
 
-            if (i <= input.Length - 1)
+            if (i <= input.Length - 1 && !isLastChar)
             {
                 i--;
-                digit = false;
             }
 
             double value;
             if (double.TryParse(number.ToString(), out value))
             {
-                Token token = new Number(Token.Types.Number, value);
-                Tokens.Add(token);
+                Token token = new Token(Token.Types.Number, value.ToString());
+                tokens.Add(token);
             }
         }
 
         /// <summary>
         /// Processing number as HEX
         /// </summary>
-        /// <param name="i">indexer</param>
-        /// <param name="input">expression</param>
-        /// <param name="digit">digit flag</param>
-        /// <param name="Tokens">using Tokens' list</param>
-        private static void hexNumber(ref int i, string input, ref bool digit, List<Token> Tokens)
+        private void prcoHexNumber()
         {
             StringBuilder number = new StringBuilder();
             i += 2;
 
+            bool isLastChar = false;
             while ((input[i] >= '0' && input[i] <= '9') ||
                 (input[i] >= 'a' && input[i] <= 'f') ||
                 (input[i] >= 'A' && input[i] <= 'F'))
@@ -150,16 +150,16 @@ namespace Calc
 
                 else
                 {
+                    isLastChar = true;
                     break;
                 }
             }
 
-            isInteger(input, i);
+            exceptDigit();
 
-            if (i <= input.Length - 1)
+            if (i <= input.Length - 1 && !isLastChar)
             {
                 i--;
-                digit = false;
             }
 
             int value;
@@ -167,23 +167,20 @@ namespace Calc
             if (int.TryParse(number.ToString(),
                 NumberStyles.AllowHexSpecifier, culture, out value))
             {
-                Token token = new Number(Token.Types.Number, value);
-                Tokens.Add(token);
+                Token token = new Token(Token.Types.Number, value.ToString());
+                tokens.Add(token);
             }
         }
 
         /// <summary>
         /// Processing numer as Oct
         /// </summary>
-        /// <param name="i">indexer</param>
-        /// <param name="input">expression</param>
-        /// <param name="digit">digit flag</param>
-        /// <param name="Tokens">using Tokens' array</param>
-        private static void octNumber(ref int i, string input, ref bool digit, List<Token> Tokens)
+        private void procOctNumber()
         {
             StringBuilder number = new StringBuilder();
             i++;
 
+            bool isLastChar = false;
             while (input[i] >= '0' && input[i] <= '7')
             {
                 number.Append(input[i]);
@@ -195,16 +192,16 @@ namespace Calc
 
                 else
                 {
+                    isLastChar = true;
                     break;
                 }
             }
 
-            isInteger(input, i);
+            exceptDigit();
 
-            if (i <= input.Length - 1)
+            if (i <= input.Length - 1 && !isLastChar)
             {
                 i--;
-                digit = false;
             }
 
             int value = 0;
@@ -214,69 +211,67 @@ namespace Calc
                 value += int.Parse(number[j].ToString()) * (int)Math.Pow(8, number.Length - 1 - j);
             }
 
-            Token oct = new Number(Token.Types.Number, value);
-            Tokens.Add(oct);
+            Token oct = new Token(Token.Types.Number, value.ToString());
+            tokens.Add(oct);
         }
 
         /// <summary>
         /// Processing operation symbols
         /// </summary>
-        /// <param name="i">indexer</param>
-        /// <param name="input">expression</param>
-        /// <param name="Tokens">using Tokens' list</param>
-        private static void op(int i, string input, List<Token> Tokens)
+        private void procOp()
         {
             switch (input[i])
             {
                 case '-':
-                    Token minus = new Operator(Token.Types.LowOp, (a, b) => a - b, input[i].ToString());
-                    Tokens.Add(minus);
+                    Token minus = new Token(Token.Types.LowOp, input[i].ToString());
+                    tokens.Add(minus);
                     return;
                 case '+':
-                    Token plus = new Operator(Token.Types.LowOp, (a, b) => a + b, input[i].ToString());
-                    Tokens.Add(plus);
+                    Token plus = new Token(Token.Types.LowOp, input[i].ToString());
+                    tokens.Add(plus);
                     return;
                 case '*':
-                    Token mult = new Operator(Token.Types.MiddleOp, (a, b) => a * b, input[i].ToString());
-                    Tokens.Add(mult);
+                    Token mult = new Token(Token.Types.MiddleOp, input[i].ToString());
+                    tokens.Add(mult);
                     return;
                 case '/':
-                    Token devide = new Operator(Token.Types.MiddleOp, (a, b) => a / b, input[i].ToString());
-                    Tokens.Add(devide);
+                    Token devide = new Token(Token.Types.MiddleOp, input[i].ToString());
+                    tokens.Add(devide);
                     return;
                 case '^':
-                    Token pow = new Operator(Token.Types.HighOp, (a, b) => Math.Pow(a, b), input[i].ToString());
-                    Tokens.Add(pow);
+                    Token pow = new Token(Token.Types.HighOp, input[i].ToString());
+                    tokens.Add(pow);
                     return;
                 case '(':
-                    Token left = new Token(Token.Types.LeftBracket);
-                    Tokens.Add(left);
+                    Token left = new Token(Token.Types.LeftBracket, input[i].ToString());
+                    tokens.Add(left);
                     return;
                 case ')':
-                    Token right = new Token(Token.Types.RightBracket);
-                    Tokens.Add(right);
+                    Token right = new Token(Token.Types.RightBracket, input[i].ToString());
+                    tokens.Add(right);
                     return;
                 case ' ':
                 case ',':
+                case '\t':
+                case '\r':
+                case '\n':
                     return;
             }
 
             if (i != input.Length - 1 || (input[i] < '0' || input[i] > '9'))
             {
-                throw new ErrorInputException("not allowed character", i);
+                throw new InputErrorException("not allowed character", i);
             }
         }
 
         /// <summary>
         /// Checking HEX and OCT numbers on whether they are integer or not
         /// </summary>
-        /// <param name="input">expression</param>
-        /// <param name="i">indexer</param>
-        private static void isInteger(string input, int i)
+        private void exceptDigit()
         {
             if (input[i] == ',')
             {
-                throw new ErrorInputException("fractional HEX and OCT numbers are not supported", i);
+                throw new InputErrorException("fractional HEX and OCT numbers are not supported", i);
             }
         }
     }
