@@ -42,33 +42,33 @@ namespace Calc
 
             for (i = 0; i < input.Length; i++)
             {
-                if (((input[i] > '0' && input[i] <= '9') || input[i] == ','))
+                if ((input[i] > '0' && input[i] <= '9') || (input[i] == ','))
                 {
-                    procDecNumber();
+                    processDecNumber();
                 }
 
                 else if (input[i] == '0')
                 {
-                    if (i < input.Length - 1 && (input[i + 1] == 'x' || input[i + 1] == 'X'))
+                    if ((i < input.Length - 1) && (input[i + 1] == 'x' || input[i + 1] == 'X'))
                     {
-                        prcoHexNumber();
+                        processHexNumber();
                     }
 
-                    else if (i < input.Length - 1 && (input[i + 1] >= '0' && input[i + 1] <= '7'))
+                    else if ((i < input.Length - 1) && (input[i + 1] >= '0' && input[i + 1] <= '7'))
                     {
-                        procOctNumber();
+                        processOctNumber();
                     }
 
                     // For processing just zeros
                     else 
                     {
-                        procDecNumber();
+                        processDecNumber();
                     }
                 }
 
                 else
                 {
-                    procOp();
+                    processOp();
                 }
             }
 
@@ -78,7 +78,7 @@ namespace Calc
         /// <summary>
         /// Processing numbers as decimal
         /// </summary>
-        private void procDecNumber()
+        private void processDecNumber()
         {
             StringBuilder number = new StringBuilder();
 
@@ -86,9 +86,9 @@ namespace Calc
             bool fraction = false;
             bool isLastChar = false;
             while ((input[i] >= '0' && input[i] <= '9') ||
-                    input[i] == ',')
+                    (input[i] == ','))
             {
-                if (input[i] != ',' || (input[i] == ',' && !fraction))
+                if ((input[i] != ',') || ((input[i] == ',') && !fraction))
                 {
                     number.Append(input[i]);
 
@@ -115,7 +115,7 @@ namespace Calc
                 }
             }
 
-            if (i <= input.Length - 1 && !isLastChar)
+            if ((i <= input.Length - 1) && !isLastChar)
             {
                 i--;
             }
@@ -131,7 +131,7 @@ namespace Calc
         /// <summary>
         /// Processing number as HEX
         /// </summary>
-        private void prcoHexNumber()
+        private void processHexNumber()
         {
             StringBuilder number = new StringBuilder();
             i += 2;
@@ -157,7 +157,7 @@ namespace Calc
 
             exceptDigit();
 
-            if (i <= input.Length - 1 && !isLastChar)
+            if ((i <= input.Length - 1) && !isLastChar)
             {
                 i--;
             }
@@ -175,7 +175,7 @@ namespace Calc
         /// <summary>
         /// Processing numer as Oct
         /// </summary>
-        private void procOctNumber()
+        private void processOctNumber()
         {
             StringBuilder number = new StringBuilder();
             i++;
@@ -199,7 +199,7 @@ namespace Calc
 
             exceptDigit();
 
-            if (i <= input.Length - 1 && !isLastChar)
+            if ((i <= input.Length - 1) && !isLastChar)
             {
                 i--;
             }
@@ -218,7 +218,7 @@ namespace Calc
         /// <summary>
         /// Processing operation symbols
         /// </summary>
-        private void procOp()
+        private void processOp()
         {
             switch (input[i])
             {
@@ -258,7 +258,7 @@ namespace Calc
                     return;
             }
 
-            if (i != input.Length - 1 || (input[i] < '0' || input[i] > '9'))
+            if ((i != input.Length - 1) || (input[i] < '0' || input[i] > '9'))
             {
                 throw new InputErrorException("not allowed character", i);
             }
